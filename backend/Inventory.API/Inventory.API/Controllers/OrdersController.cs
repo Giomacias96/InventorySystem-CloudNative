@@ -1,0 +1,66 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Inventory.API.Data;
+using Inventory.API.Models;
+using System.Text.Json;
+
+namespace Inventory.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class OrdersController : ControllerBase
+    {
+        private readonly AppDbContext _context;
+
+        public OrdersController(AppDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateOrder(Order order)
+        {
+            // Iniciamos la transacción
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Verificar si hay stock suficiente
+                var product = await _context.Products.FindAsync(order.ProductId);
+                if (product == null || product.Stock < order.Quantity)
+                {
+                    return BadRequest("Stock insuficiente o producto no encontrado.");
+                }
+
+                product.Stock -= order.Quantity;
+                product.LastUpdate = DateTime.UtcNow;
+
+                // Registrar el pedido
+                order.OrderDate = DateTime.UtcNow;
+                _context.Orders.Add(order);
+
+                // Crear el evento para el Outbox (Patrón Outbox)
+                var outboxEvent = new IntegrationEventOutbox
+                {
+                    Id = Guid.NewGuid(),
+                    EventType = "OrderCreated",
+                    OccurredOnUtc = DateTime.UtcNow,
+                    Content = JsonSerializer.Serialize(new { order.ProductId, order.Quantity, order.OrderDate }),
+                    ProcessedOnUtc = null
+                };
+                _context.IntegrationEventOutboxes.Add(outboxEvent);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { Message = "Pedido creado y stock actualizado.", OrderId = order.Id });
+            }
+            catch (Exception ex)
+            {
+                // Si algo falla, se hace un Rollback automático al salir del bloque 'using'
+                await transaction.RollbackAsync();
+                return StatusCode(500, $"Error interno: {ex.Message}");
+            }
+        }
+    }
+}
