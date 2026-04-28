@@ -20,8 +20,10 @@ namespace Inventory.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateOrder(Order order)
         {
-            // Iniciamos la transacción
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Solo inicia la transacción si el proveedor no es In-Memory
+            using var transaction = _context.Database.IsInMemory()
+                ? null
+                : await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -51,14 +53,16 @@ namespace Inventory.API.Controllers
                 _context.IntegrationEventOutboxes.Add(outboxEvent);
 
                 await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
+                if (transaction != null)
+                    await transaction.CommitAsync();
 
                 return Ok(new { Message = "Pedido creado y stock actualizado.", OrderId = order.Id });
             }
             catch (Exception ex)
             {
                 // Si algo falla, se hace un Rollback automático al salir del bloque 'using'
-                await transaction.RollbackAsync();
+                if (transaction != null)
+                    await transaction.RollbackAsync();
                 return StatusCode(500, $"Error interno: {ex.Message}");
             }
         }
