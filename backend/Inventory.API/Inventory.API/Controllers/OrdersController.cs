@@ -27,6 +27,11 @@ namespace Inventory.API.Controllers
 
             try
             {
+                if (order.Quantity <= 0)
+                {
+                    return BadRequest("La cantidad debe ser mayor a cero.");
+                }
+
                 // Verificar si hay stock suficiente
                 var product = await _context.Products.FindAsync(order.ProductId);
                 if (product == null || product.Stock < order.Quantity)
