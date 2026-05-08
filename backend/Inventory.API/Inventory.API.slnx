@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="../../Inventory.Tests/Inventory.Tests.csproj" Id="1d0ce5ab-b5d5-409b-9ce1-4f47321709c7" />
+  <Project Path="../../microservices/Inventory.LambdaProcessor/Inventory.LambdaProcessor.csproj" />
   <Project Path="../../microservices/Inventory.OutboxProcessor/Inventory.OutboxProcessor.csproj" />
   <Project Path="Inventory.API/Inventory.API.csproj" />
 </Solution>

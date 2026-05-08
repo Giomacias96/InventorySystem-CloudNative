@@ -61,6 +61,8 @@ dlldata.c
 BenchmarkDotNet.Artifacts/
 
 # .NET
+[Bb]in/
+[Ob]j/
 project.lock.json
 project.fragment.lock.json
 artifacts/
@@ -480,3 +482,12 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# AWS Lambda / Deployment
+deploy-package.zip
+.aws-sam/
+aws-lambda-tools-defaults.json
+
+# Docker / LocalStack local data
+.localstack/
+data/

@@ -1,0 +1,14 @@
+services:
+  localstack:
+    container_name: localstack_main
+    image: localstack/localstack:3.4.0
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - SERVICES=sqs
+      - ACTIVATE_PRO=0
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./localstack_data:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"

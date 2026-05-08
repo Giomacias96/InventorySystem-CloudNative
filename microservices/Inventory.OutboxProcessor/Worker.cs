@@ -1,3 +1,5 @@
+using Amazon.SQS;
+using Amazon.SQS.Model;
 using Inventory.API.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,52 +9,65 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IAmazonSQS _sqsClient;
+    private readonly IConfiguration _configuration;
+    private string _queueUrl = string.Empty;
 
-    public Worker(ILogger<Worker> logger, IServiceScopeFactory scopeFactory)
+    public Worker(ILogger<Worker> logger, IServiceScopeFactory scopeFactory, IAmazonSQS sqsClient, IConfiguration configuration)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _sqsClient = sqsClient;
+        _configuration = configuration;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Asegurarnos de que la cola existe en LocalStack
+        var queueName = _configuration["AWS:QueueName"];
+        var createQueueResponse = await _sqsClient.CreateQueueAsync(queueName, stoppingToken);
+        _queueUrl = createQueueResponse.QueueUrl;
+
+        _logger.LogInformation("Conectado a la cola SQS en LocalStack: {QueueUrl}", _queueUrl);
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogInformation("Revisando tabla Outbox...");
-
             using (var scope = _scopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                // Buscar eventos no procesados
                 var events = await context.IntegrationEventOutboxes
                     .Where(e => e.ProcessedOnUtc == null)
-                    .Take(10) // Procesamos de 10 en 10
+                    .OrderBy(e => e.OccurredOnUtc)
+                    .Take(10)
                     .ToListAsync(stoppingToken);
 
                 foreach (var outboxEvent in events)
                 {
                     try
                     {
-                        // Simular envío a AWS SQS
-                        _logger.LogInformation("Enviando evento {Id} a AWS SQS: {Content}",
-                            outboxEvent.Id, outboxEvent.Content);
+                        var sendMessageRequest = new SendMessageRequest
+                        {
+                            QueueUrl = _queueUrl,
+                            MessageBody = outboxEvent.Content
+                            // MessageGroupId eliminado
+                        };
 
-                        // Aquí iría el código real de AWS SDK en el futuro
-                        await Task.Delay(500, stoppingToken);
+                        await _sqsClient.SendMessageAsync(sendMessageRequest, stoppingToken);
+
+                        _logger.LogInformation("Evento {Id} enviado con éxito a SQS.", outboxEvent.Id);
 
                         outboxEvent.ProcessedOnUtc = DateTime.UtcNow;
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error procesando evento {Id}", outboxEvent.Id);
+                        _logger.LogError(ex, "Error enviando evento {Id} a SQS", outboxEvent.Id);
                     }
                 }
 
                 await context.SaveChangesAsync(stoppingToken);
             }
 
-            // Esperar 5 segundos antes de la siguiente revisión
             await Task.Delay(5000, stoppingToken);
         }
     }

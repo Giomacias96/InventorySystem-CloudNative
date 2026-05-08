@@ -16,14 +16,14 @@ public class OrdersControllerTests
     [SetUp]
     public void Setup()
     {
-        // 1. Configurar base de datos en memoria para cada prueba
+        // Configurar base de datos en memoria para cada prueba
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
         _context = new AppDbContext(options);
 
-        // 2. Sembrar datos de prueba (Seed data)
+        // Datos de prueba
         _context.Products.Add(new Product { Id = 1, Name = "Laptop", Stock = 10 });
         _context.SaveChanges();
 
@@ -42,7 +42,7 @@ public class OrdersControllerTests
         // Assert (Afirmar)
         var product = await _context.Products.FindAsync(1);
 
-        // Primero verificamos que no sea nulo (esto quita el Warning)
+        // Verificamos que no sea nulo (esto quita el Warning)
         Assert.That(product, Is.Not.Null, "El producto debería existir en la DB");
 
         Assert.Multiple(() =>
