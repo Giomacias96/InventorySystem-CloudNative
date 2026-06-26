@@ -8,14 +8,15 @@ El proyecto implementa un flujo de datos asíncrono para garantizar la integrida
 2. **Worker Service:** Procesa la tabla Outbox y publica eventos en **Amazon SQS**.
 3. **Serverless (AWS Lambda):** Función en C# que consume mensajes de SQS.
 4. **NoSQL (DynamoDB):** Almacena proyecciones de analíticos (ventas totales) para consultas de alto rendimiento.
-
-
+5. **Frontend (React):** Panel administrativo SPA que consume los servicios en tiempo real.
 
 ## 🛠️ Stack Tecnológico
+* **Frontend:** React + TypeScript (Vite), React Router DOM, Lucide-React.
 * **Backend:** .NET 8 (C#) con Entity Framework Core.
 * **Mensajería:** Amazon SQS (Simulado con LocalStack).
 * **Serverless:** AWS Lambda (.NET 8).
-* **Bases de Datos:** * Relacional: SQL Server (Transaccional).
+* **Bases de Datos:**
+    * Relacional: SQL Server (Transaccional).
     * NoSQL: DynamoDB (Analíticos/Lectura rápida).
 * **Infraestructura:** Docker & LocalStack.
 
@@ -24,7 +25,7 @@ El proyecto implementa un flujo de datos asíncrono para garantizar la integrida
 ### Requisitos Previos
 * **Docker Desktop** con soporte para WSL 2.
 * **AWS CLI** instalado y configurado (usar `test`/`test` para credenciales).
-* **.NET 8 SDK**.
+* **.NET 8 SDK** y **Node.js** (v18+).
 
 ### Paso 1: Levantar Infraestructura (LocalStack)
 Ejecuta el contenedor con soporte para Docker-in-Docker (necesario para Lambdas):
@@ -46,5 +47,13 @@ Ejecuta el script de automatización para crear la cola, la tabla y el mapeo de 
 ./scripts/setup-local-aws.ps1
 ```
 
-### Paso 4: Iniciar la Solución
-Abre Inventory.API.slnx en Visual Studio y arranca los proyectos Inventory.API e Inventory.OutboxProcessor.
+### Paso 4: Iniciar el Backend
+Abre `Inventory.API.slnx` en Visual Studio y arranca los proyectos **Inventory.API** e **Inventory.OutboxProcessor**.
+
+### Paso 5: Iniciar el Panel de Administración (Frontend)
+Abre una nueva terminal, navega a la carpeta del frontend, instala las dependencias y levanta el servidor de desarrollo:
+```bash
+cd inventory-web
+npm install
+npm run dev
+```
